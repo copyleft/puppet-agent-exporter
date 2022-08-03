@@ -78,14 +78,15 @@ var rootTemplate = template.Must(template.New("/").Parse(`<html>
 </html>
 `))
 
-func run(ctx context.Context, listenAddress, telemetryPath string) (ok bool) {
+func run(ctx context.Context, listenAddress, telemetryPath string, reportPath string) (ok bool) {
 	lgr := zap.S()
 
 	prometheus.DefaultRegisterer.MustRegister(puppetconfig.Collector{
 		Logger: lgr,
 	})
 	prometheus.DefaultRegisterer.MustRegister(puppetreport.Collector{
-		Logger: lgr,
+		Logger:     lgr,
+		ReportPath: reportPath,
 	})
 
 	mux := http.NewServeMux()
@@ -128,6 +129,7 @@ func main() {
 	var (
 		listenAddress = kingpin.Flag("web.listen-address", "Address on which to expose metrics and web interface.").Default(":9819").String()
 		telemetryPath = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
+		reportPath    = kingpin.Flag("reportpath", "Path to puppet report.").Default("/opt/puppetlabs/puppet/cache/state/last_run_report.yaml").String()
 	)
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
@@ -138,7 +140,7 @@ func main() {
 	ctx, onExit := setupInterruptContext()
 	defer onExit()
 
-	if ok := run(ctx, *listenAddress, *telemetryPath); !ok {
+	if ok := run(ctx, *listenAddress, *telemetryPath, *reportPath); !ok {
 		os.Exit(1)
 	}
 }
